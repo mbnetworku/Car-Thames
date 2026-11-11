@@ -4,3 +4,6 @@ windows/output/
 *.apk
 *.jks
 *.idsig
+android-launcher/.tools/
+android-launcher/build/
+!windows/launcher/CarLauncher.apk

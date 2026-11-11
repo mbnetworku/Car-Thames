@@ -9,6 +9,8 @@ Tools and notes for building custom **"variety theme" plugin APKs** for Android 
 | `windows/Start-ThemeStudio.bat` | Double-click to start. Asks for Administrator, then launches the web UI |
 | `windows/ThemeStudio.ps1` | Local PowerShell web server on `http://localhost:8765/` that does the work |
 | `windows/web/index.html` | The web UI |
+| `windows/launcher/CarLauncher.apk` | **Car Launcher**: a home screen app that shows your themes (source in `android-launcher/`) |
+| `android-launcher/` | Launcher source code and build script, [details](android-launcher/README.md) |
 | `docs/SFP_T100_DN-analysis.md` | Reverse-engineering notes on the SFP_T100_DN theme used as the first template |
 
 ## Car Theme Studio (Windows)
@@ -31,6 +33,16 @@ Tools and notes for building custom **"variety theme" plugin APKs** for Android 
    6. **Layout files:** edit the raw JSON (advanced).
    7. **Build signed APK:** the result goes to `windows\output\`.
 4. Install it on the head unit from a USB stick, or with **Install via ADB** if `adb` is available.
+
+## Full workflow: design, export, run
+1. **Design** your theme in Car Theme Studio (layout designer, images, transparency).
+2. **Export** it with **Build signed APK**.
+3. **Install on the car:**
+   - `CarLauncher.apk` (only once; it's in the Build section of the Studio);
+   - your theme APK.
+4. **Set up:** press **Home**, choose **Car Launcher** and **Always**, then open the launcher menu and choose your theme.
+
+With Car Launcher you don't depend on the car's built-in launcher: it loads any theme you build, however it's signed.
 
 ### Why it runs as Administrator
 Installing Java system-wide with winget needs admin rights. The server itself only listens on `localhost`, so it is not reachable from your network.

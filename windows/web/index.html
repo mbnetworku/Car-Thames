@@ -163,6 +163,13 @@
       <button id="btnOpenOut">Open output folder</button>
     </div>
     <div class="outputs" id="outputs" style="margin-top:12px"></div>
+    <div class="launcher" id="launcherBox" style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
+      <b>Car Launcher</b> <span class="muted">- the home screen app that shows your themes. Install it once, then install any theme you build.</span>
+      <div class="row" style="margin-top:8px">
+        <a id="dlLauncher" href="/api/launcher"><button type="button">Download CarLauncher.apk</button></a>
+        <button id="adbLauncher" style="display:none">Install Car Launcher via ADB</button>
+      </div>
+    </div>
     <pre class="log" id="log">Ready.</pre>
   </section>
 </main>
@@ -196,6 +203,8 @@ async function refresh() {
   const s = await api('/api/status');
   $('chips').innerHTML = chip('Admin', s.admin) + chip('Java', s.java) + chip('Tools', s.tools) + chip('Template', s.template) + chip('ADB', s.adb);
   $('setup').style.display = (s.java && s.tools) ? 'none' : '';
+  $('launcherBox').style.display = s.launcher ? '' : 'none';
+  $('adbLauncher').style.display = s.adb ? '' : 'none';
   const i = s.info;
   if (i) {
     for (const k of ['suffix', 'themeName', 'themeId', 'versionCode', 'versionName', 'oemId']) if (document.activeElement !== $(k)) $(k).value = i[k] || '';
@@ -295,6 +304,10 @@ $('btnBuild').onclick = e => busy(e.target, async () => {
   const r = await api('/api/build', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
   log(r.log);
   await refresh();
+});
+$('adbLauncher').onclick = e => busy(e.target, async () => {
+  log('Installing Car Launcher via ADB...');
+  log((await api('/api/adb-install', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ file: '@launcher' }) })).log);
 });
 $('btnOpenOut').onclick = () => api('/api/open-output', { method: 'POST' }).catch(e => log(e.message));
 $('outputs').onclick = e => {

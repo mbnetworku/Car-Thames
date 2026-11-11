@@ -27,6 +27,7 @@ $KeyPass   = Join-Path $WorkDir 'keystore.pass'
 $OrigDir   = Join-Path $WorkDir 'originals'
 $DesignFile = Join-Path $WorkDir 'designer.json'
 $PluginPrefix = 'launcher.variety.theme.plugin.'
+$LauncherApk = Join-Path $Root 'launcher\CarLauncher.apk'
 
 $ApktoolUrl = 'https://github.com/iBotPeaches/Apktool/releases/download/v2.10.0/apktool_2.10.0.jar'
 $SignerUrl  = 'https://github.com/patrickfav/uber-apk-signer/releases/download/v1.3.0/uber-apk-signer-1.3.0.jar'
@@ -307,8 +308,8 @@ function Get-AdbExe {
 function Install-ToCar([string]$file) {
     $adb = Get-AdbExe
     if (-not $adb) { throw 'adb not found. Install Android platform-tools or put them in windows\tools\platform-tools.' }
-    $apk = Join-Path $OutDir ([IO.Path]::GetFileName($file))
-    if (-not (Test-Path $apk)) { throw 'Built APK not found.' }
+    if ($file -eq '@launcher') { $apk = $LauncherApk } else { $apk = Join-Path $OutDir ([IO.Path]::GetFileName($file)) }
+    if (-not (Test-Path $apk)) { throw 'APK not found.' }
     $r = Invoke-Native $adb @('install', '-r', $apk)
     return $r.output
 }
@@ -365,6 +366,7 @@ function Invoke-Route($ctx) {
             Send-Json $ctx ([ordered]@{
                 admin = (Test-IsAdmin); java = [bool](Get-JavaExe); adb = [bool](Get-AdbExe)
                 tools = ((Test-Path $ApktoolJar) -and (Test-Path $SignerJar)); template = (Test-Path $Template)
+                launcher = (Test-Path $LauncherApk)
                 info = (Get-ThemeInfo); outputs = @(Get-ChildItem $OutDir -Filter *.apk -ErrorAction SilentlyContinue | Sort-Object LastWriteTime -Descending | ForEach-Object { $_.Name })
             }); return
         }
@@ -439,6 +441,11 @@ function Invoke-Route($ctx) {
             if (-not (Test-Path $f)) { Send-Json $ctx @{ error = 'Not found' } 404; return }
             $ctx.Response.Headers.Add('Content-Disposition', "attachment; filename=""$name""")
             Send-Response $ctx 200 ([IO.File]::ReadAllBytes($f)) $MimeTypes['.apk']; return
+        }
+        '^/api/launcher$' {
+            if (-not (Test-Path $LauncherApk)) { Send-Json $ctx @{ error = 'CarLauncher.apk is missing from windows\launcher' } 404; return }
+            $ctx.Response.Headers.Add('Content-Disposition', 'attachment; filename="CarLauncher.apk"')
+            Send-Response $ctx 200 ([IO.File]::ReadAllBytes($LauncherApk)) $MimeTypes['.apk']; return
         }
         '^/api/open-output$' { Start-Process explorer.exe $OutDir; Send-Json $ctx @{ ok = $true }; return }
         '^/api/adb-install$' {

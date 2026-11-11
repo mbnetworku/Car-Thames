@@ -1,0 +1,30 @@
+name: Build Car Launcher
+
+on:
+  push:
+    paths: ["android-launcher/**", ".github/workflows/launcher.yml"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Restore signing key (optional)
+        env:
+          KEYSTORE_B64: ${{ secrets.LAUNCHER_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/launcher.jks"; echo "KEYSTORE=$RUNNER_TEMP/launcher.jks" >> "$GITHUB_ENV"; fi
+      - name: Build
+        env:
+          KS_PASS: ${{ secrets.LAUNCHER_KS_PASS }}
+          KS_ALIAS: ${{ secrets.LAUNCHER_KS_ALIAS }}
+        run: android-launcher/build.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CarLauncher
+          path: android-launcher/build/CarLauncher.apk
