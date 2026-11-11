@@ -1,0 +1,6 @@
+windows/tools/
+windows/workspace/
+windows/output/
+*.apk
+*.jks
+*.idsig

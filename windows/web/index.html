@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Car Theme Studio</title>
+<style>
+  :root {
+    --bg: #0f1216; --panel: #181c22; --panel2: #20262e; --line: #2c333d;
+    --text: #e6e9ee; --muted: #8b95a3; --accent: #2f9cf4; --ok: #3ccf8e; --warn: #f2b33d; --bad: #f2555a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 "Segoe UI", system-ui, sans-serif; }
+  header { display: flex; align-items: center; gap: 16px; padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 5; }
+  header h1 { font-size: 17px; margin: 0; font-weight: 600; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+  .chip { padding: 3px 10px; border-radius: 99px; background: var(--panel2); font-size: 12px; color: var(--muted); }
+  .chip.ok::before { content: "● "; color: var(--ok); }
+  .chip.bad::before { content: "● "; color: var(--bad); }
+  main { max-width: 1200px; margin: 0 auto; padding: 20px; display: grid; gap: 18px; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
+  section h2 { margin: 0 0 4px; font-size: 15px; }
+  section p.hint { margin: 0 0 14px; color: var(--muted); font-size: 13px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+  label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
+  input, select, textarea { background: var(--panel2); border: 1px solid var(--line); color: var(--text); border-radius: 6px; padding: 8px 10px; font: inherit; width: 100%; }
+  textarea { font-family: Consolas, monospace; font-size: 12px; min-height: 320px; }
+  button { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px 14px; font: inherit; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button:disabled { opacity: .5; cursor: wait; }
+  .drop { border: 2px dashed var(--line); border-radius: 10px; padding: 26px; text-align: center; color: var(--muted); cursor: pointer; }
+  .drop.over { border-color: var(--accent); color: var(--text); }
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; max-height: 620px; overflow: auto; padding-right: 4px; }
+  .tile { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 6px; display: grid; gap: 4px; cursor: pointer; }
+  .tile:hover { border-color: var(--accent); }
+  .tile .img { height: 100px; display: grid; place-items: center; background: repeating-conic-gradient(#2a2f37 0 25%, #22272e 0 50%) 0 0/16px 16px; border-radius: 4px; overflow: hidden; }
+  .tile img { max-width: 100%; max-height: 100px; }
+  .tile .name { font-size: 11px; color: var(--muted); word-break: break-all; }
+  pre.log { background: #0a0c0f; border: 1px solid var(--line); border-radius: 6px; padding: 10px; font-size: 12px; max-height: 260px; overflow: auto; white-space: pre-wrap; margin: 12px 0 0; }
+  .outputs a { color: var(--accent); }
+  .muted { color: var(--muted); }
+  @media (max-width: 600px) { header { flex-wrap: wrap; } .chips { margin-left: 0; } main { padding: 12px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>🚗 Car Theme Studio</h1>
+  <div class="chips" id="chips"></div>
+</header>
+<main>
+  <section id="setup">
+    <h2>1. Setup</h2>
+    <p class="hint">Java and two free tools (apktool, uber-apk-signer) are needed. Both buttons are one-time.</p>
+    <div class="row">
+      <button id="btnJava">Install Java</button>
+      <button id="btnTools">Download tools</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>2. Load a template theme APK</h2>
+    <p class="hint">Drop an existing variety theme APK (for example SFP_T100_DN.apk). Its images and layouts become your starting point.</p>
+    <div class="drop" id="drop">Drop .apk here or click to choose<input type="file" id="apkFile" accept=".apk" hidden></div>
+  </section>
+
+  <section>
+    <h2>3. Theme identity</h2>
+    <p class="hint">Use a <b>new</b> ID name so your theme installs next to the original instead of replacing it. Keep the OEM ID unchanged.</p>
+    <div class="grid2">
+      <label>ID name (package suffix)<input id="suffix" placeholder="my_theme_01"></label>
+      <label>Display name<input id="themeName" placeholder="My Theme"></label>
+      <label>Theme number (digits)<input id="themeId" placeholder="20261111000001"></label>
+      <label>Version code<input id="versionCode"></label>
+      <label>Version name<input id="versionName"></label>
+      <label>OEM ID (read only)<input id="oemId" disabled></label>
+    </div>
+    <p class="muted" id="pkgLine" style="margin:10px 0 0"></p>
+  </section>
+
+  <section>
+    <h2>4. Images</h2>
+    <p class="hint">Click an image to replace it. Use the same file type and ideally the same size (shown on hover).</p>
+    <div class="row" style="margin-bottom:12px">
+      <input id="filter" placeholder="Filter, e.g. bg, icon, pointer, night" style="max-width:320px">
+      <span class="muted" id="imgCount"></span>
+    </div>
+    <div class="gallery" id="gallery"></div>
+    <input type="file" id="imgFile" accept="image/*" hidden>
+  </section>
+
+  <section>
+    <h2>5. Layout files (JSON)</h2>
+    <p class="hint">Positions, sizes and which widgets appear. Folders match screen sizes (layout-1600x720, layout-1280x480 and so on).</p>
+    <div class="row" style="margin-bottom:10px">
+      <select id="jsonSel" style="max-width:520px"></select>
+      <button id="btnSaveJson">Save JSON</button>
+    </div>
+    <textarea id="jsonText" spellcheck="false"></textarea>
+  </section>
+
+  <section>
+    <h2>6. Build</h2>
+    <p class="hint">Builds and signs the APK into the <code>output</code> folder. Copy it to a USB stick and install it on the head unit, or use ADB.</p>
+    <div class="row">
+      <button class="primary" id="btnBuild">Build signed APK</button>
+      <button id="btnOpenOut">Open output folder</button>
+    </div>
+    <div class="outputs" id="outputs" style="margin-top:12px"></div>
+    <pre class="log" id="log">Ready.</pre>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let images = [], replaceTarget = null;
+
+function log(msg) { $('log').textContent = msg; }
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, opts);
+  const ct = r.headers.get('content-type') || '';
+  const data = ct.includes('json') ? await r.json() : await r.text();
+  if (!r.ok) throw new Error(data && data.error ? data.error : r.statusText);
+  return data;
+}
+
+async function busy(btn, fn) {
+  const all = document.querySelectorAll('button');
+  all.forEach(b => b.disabled = true);
+  try { await fn(); } catch (e) { log('ERROR: ' + e.message); }
+  finally { all.forEach(b => b.disabled = false); }
+}
+
+function chip(text, ok) { return `<span class="chip ${ok ? 'ok' : 'bad'}">${text}</span>`; }
+
+async function refresh() {
+  const s = await api('/api/status');
+  $('chips').innerHTML = chip('Admin', s.admin) + chip('Java', s.java) + chip('Tools', s.tools) + chip('Template', s.template) + chip('ADB', s.adb);
+  $('setup').style.display = (s.java && s.tools) ? 'none' : '';
+  const i = s.info;
+  if (i) {
+    for (const k of ['suffix', 'themeName', 'themeId', 'versionCode', 'versionName', 'oemId']) if (document.activeElement !== $(k)) $(k).value = i[k] || '';
+    $('pkgLine').textContent = 'Current package: ' + i.package;
+  }
+  const outs = s.outputs || [];
+  $('outputs').innerHTML = outs.length ? 'Built: ' + outs.slice(0, 6).map(n =>
+    `<div><a href="/api/download?name=${encodeURIComponent(n)}">${n}</a>${s.adb ? ` <button data-adb="${n}">Install via ADB</button>` : ''}</div>`).join('') : '';
+  if (i) { await loadImages(); await loadJsonList(); }
+}
+
+async function loadImages() {
+  images = await api('/api/images');
+  renderGallery();
+}
+
+function renderGallery() {
+  const f = $('filter').value.trim().toLowerCase();
+  const list = images.filter(x => !f || x.path.toLowerCase().includes(f));
+  $('imgCount').textContent = `${list.length} of ${images.length} images`;
+  $('gallery').innerHTML = list.slice(0, 400).map(x => `
+    <div class="tile" data-path="${x.path}" title="${x.path}">
+      <div class="img"><img loading="lazy" src="/api/file?path=${encodeURIComponent(x.path)}&t=${Date.now()}"
+        onload="this.closest('.tile').title += ' (' + this.naturalWidth + 'x' + this.naturalHeight + ')'"></div>
+      <div class="name">${x.path.replace(/^res\//, '')}</div>
+    </div>`).join('');
+}
+
+async function loadJsonList() {
+  const list = await api('/api/jsons');
+  const cur = $('jsonSel').value;
+  $('jsonSel').innerHTML = list.map(p => `<option>${p}</option>`).join('');
+  if (cur && list.includes(cur)) $('jsonSel').value = cur;
+  await loadJson();
+}
+
+async function loadJson() {
+  const p = $('jsonSel').value;
+  if (!p) return;
+  const r = await fetch('/api/file?path=' + encodeURIComponent(p));
+  $('jsonText').value = await r.text();
+}
+
+// --- events
+$('btnJava').onclick = e => busy(e.target, async () => { log('Installing Java (can take a few minutes)...'); log((await api('/api/install-java', { method: 'POST' })).log); await refresh(); });
+$('btnTools').onclick = e => busy(e.target, async () => { log('Downloading tools...'); log((await api('/api/install-tools', { method: 'POST' })).log); await refresh(); });
+
+const drop = $('drop');
+drop.onclick = () => $('apkFile').click();
+drop.ondragover = e => { e.preventDefault(); drop.classList.add('over'); };
+drop.ondragleave = () => drop.classList.remove('over');
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove('over'); if (e.dataTransfer.files[0]) uploadApk(e.dataTransfer.files[0]); };
+$('apkFile').onchange = e => { if (e.target.files[0]) uploadApk(e.target.files[0]); };
+
+function uploadApk(file) {
+  busy(null, async () => {
+    log('Unpacking ' + file.name + ' ...');
+    const r = await api('/api/template', { method: 'POST', body: file });
+    log(r.log);
+    await refresh();
+  });
+}
+
+$('filter').oninput = renderGallery;
+$('gallery').onclick = e => {
+  const t = e.target.closest('.tile'); if (!t) return;
+  replaceTarget = t.dataset.path;
+  $('imgFile').click();
+};
+$('imgFile').onchange = e => {
+  const f = e.target.files[0]; e.target.value = '';
+  if (!f || !replaceTarget) return;
+  const want = replaceTarget.split('.').pop().toLowerCase(), got = f.name.split('.').pop().toLowerCase();
+  const norm = x => x === 'jpeg' ? 'jpg' : x;
+  if (norm(want) !== norm(got) && !confirm(`The original is .${want} but you chose .${got}. Replace anyway?`)) return;
+  busy(null, async () => {
+    await api('/api/file?path=' + encodeURIComponent(replaceTarget), { method: 'POST', body: f });
+    log('Replaced ' + replaceTarget);
+    renderGallery();
+  });
+};
+
+$('jsonSel').onchange = () => loadJson();
+$('btnSaveJson').onclick = e => busy(e.target, async () => {
+  try { JSON.parse($('jsonText').value); } catch (err) { throw new Error('Invalid JSON: ' + err.message); }
+  await api('/api/file?path=' + encodeURIComponent($('jsonSel').value), { method: 'POST', body: $('jsonText').value });
+  log('Saved ' + $('jsonSel').value);
+});
+
+$('btnBuild').onclick = e => busy(e.target, async () => {
+  log('Building... (about 30 seconds)');
+  const body = {};
+  for (const k of ['suffix', 'themeName', 'themeId', 'versionCode', 'versionName']) body[k] = $(k).value.trim();
+  const r = await api('/api/build', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  log(r.log);
+  await refresh();
+});
+$('btnOpenOut').onclick = () => api('/api/open-output', { method: 'POST' }).catch(e => log(e.message));
+$('outputs').onclick = e => {
+  const n = e.target.dataset.adb; if (!n) return;
+  busy(e.target, async () => { log('Installing via ADB...'); log((await api('/api/adb-install', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ file: n }) })).log); });
+};
+
+refresh().catch(e => log('ERROR: ' + e.message));
+</script>
+</body>
+</html>
