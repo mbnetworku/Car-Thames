@@ -19,9 +19,17 @@ Tools and notes for building custom **"variety theme" plugin APKs** for Android 
    1. **Setup:** click **Install Java** (installs Temurin JDK 17 via winget) and **Download tools** (apktool and uber-apk-signer). This is only needed once.
    2. **Load a template:** drop an existing theme APK, for example `SFP_T100_DN.apk`.
    3. **Theme identity:** set a new ID name (for example `my_theme_01`), a display name and a theme number.
-   4. **Images:** click any image to replace it with your own.
-   5. **Layout files:** edit the JSON for positions, sizes and widgets.
-   6. **Build signed APK:** the result goes to `windows\output\`.
+   4. **Layout designer and preview:** see the home screen at its real size (1600×720, 1280×480, 1024×600 or 768×880), in day or night mode. The designer lets you:
+      - **Move and resize** anything: drag a box to move it and drag its corner to resize it. Arrow keys nudge it 1 px (with Shift, 10 px). You can also type exact X, Y, width and height.
+      - **Add, duplicate or delete app slots.** For each slot, choose whether the driver can pick its app with a long-press on the car.
+      - **Change icon size, label size**, or hide app names.
+      - **Set transparency** for any panel or the wallpaper with a slider. It's baked into the image, and JPGs become PNGs automatically. The originals are kept, so setting 0% restores them.
+      - **Preview apps:** pick which app icon to show in each slot. This is only for the preview; on the car, the driver picks the app.
+      - **Full screen preview**, and **Save preview as PNG**.
+      - Click **Save design** before building.
+   5. **Images:** click any image to replace it with your own.
+   6. **Layout files:** edit the raw JSON (advanced).
+   7. **Build signed APK:** the result goes to `windows\output\`.
 4. Install it on the head unit from a USB stick, or with **Install via ADB** if `adb` is available.
 
 ### Why it runs as Administrator

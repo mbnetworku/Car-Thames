@@ -41,6 +41,40 @@
   pre.log { background: #0a0c0f; border: 1px solid var(--line); border-radius: 6px; padding: 10px; font-size: 12px; max-height: 260px; overflow: auto; white-space: pre-wrap; margin: 12px 0 0; }
   .outputs a { color: var(--accent); }
   .muted { color: var(--muted); }
+  /* ---- designer ---- */
+  .dbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .dbar select { width: auto; }
+  .dbar .chk { display: flex; gap: 6px; align-items: center; color: var(--text); font-size: 13px; }
+  .dbar .chk input { width: auto; }
+  .dwrap { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; align-items: start; }
+  #dStage { position: relative; overflow: hidden; background: #000; border-radius: 8px; border: 1px solid var(--line); user-select: none; }
+  #dScreen { position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: hidden; background: #000; }
+  .d-pagebg { position: absolute; inset: 0; background-size: 100% 100%; pointer-events: none; }
+  .d-el { position: absolute; cursor: move; outline: 1px dashed transparent; }
+  .labels .d-el { outline-color: rgba(47,156,244,.45); }
+  .d-el:hover { outline: 2px solid rgba(47,156,244,.8); z-index: 3; }
+  .d-el.sel { outline: 3px solid #2f9cf4; z-index: 4; }
+  .d-bg { position: absolute; inset: 0; background-size: 100% 100%; pointer-events: none; }
+  .d-icon { position: absolute; pointer-events: none; object-fit: contain; }
+  .d-label { position: absolute; left: 0; right: 0; text-align: center; color: #fff; white-space: nowrap; overflow: hidden; pointer-events: none; text-shadow: 0 1px 2px #000; }
+  .d-ph { position: absolute; inset: 0; display: grid; place-items: center; color: rgba(255,255,255,.75); font-size: 28px; font-weight: 600; pointer-events: none; text-shadow: 0 2px 4px #000; }
+  .d-tag { display: none; position: absolute; left: 0; top: 0; background: rgba(47,156,244,.9); color: #fff; font-size: 13px; padding: 1px 5px; pointer-events: none; white-space: nowrap; }
+  .labels .d-tag, .d-el.sel > .d-tag { display: block; }
+  .d-handle { position: absolute; right: -9px; bottom: -9px; width: 18px; height: 18px; background: #2f9cf4; border: 2px solid #fff; border-radius: 50%; cursor: nwse-resize; z-index: 5; }
+  #dProps { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 14px; display: grid; gap: 10px; }
+  #dProps h3 { margin: 0; font-size: 14px; } #dProps h4 { margin: 6px 0 0; font-size: 13px; }
+  #dProps .pgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  #dProps .chk { display: flex; gap: 8px; align-items: center; color: var(--text); font-size: 13px; }
+  #dProps .chk input { width: auto; }
+  #dProps p { margin: 0; }
+  input[type=range] { padding: 0; }
+  .small { font-size: 12px; }
+  button.danger:hover { border-color: var(--bad); color: var(--bad); }
+  body.d-full main > section:not(#designer), body.d-full header, body.d-full #dProps, body.d-full #designer > h2, body.d-full #designer > p { display: none; }
+  body.d-full main { max-width: none; padding: 10px; }
+  body.d-full #designer { border: 0; padding: 0; background: transparent; }
+  body.d-full .dwrap { grid-template-columns: 1fr; }
+  @media (max-width: 900px) { .dwrap { grid-template-columns: 1fr; } }
   @media (max-width: 600px) { header { flex-wrap: wrap; } .chips { margin-left: 0; } main { padding: 12px; } }
 </style>
 </head>
@@ -79,8 +113,29 @@
     <p class="muted" id="pkgLine" style="margin:10px 0 0"></p>
   </section>
 
+  <section id="designer" style="display:none">
+    <h2>4. Layout designer and preview</h2>
+    <p class="hint">See how the home screen will look. Move and resize anything, add or remove app slots, change icon and label sizes, and make panels transparent. Click <b>Save design</b> before building.</p>
+    <div class="dbar">
+      <select id="dLayout" title="Screen size"></select>
+      <select id="dPage" title="Left card page"></select>
+      <label class="chk"><input type="checkbox" id="dNight"> Night mode</label>
+      <label class="chk"><input type="checkbox" id="dLabels" checked> Show outlines</label>
+      <button id="dAddApp">+ Add app slot</button>
+      <button id="dFull">Full screen preview</button>
+      <button id="dExport">Save preview as PNG</button>
+      <button id="dSave">Save design</button>
+      <span class="muted small" id="dZoom"></span>
+    </div>
+    <div class="dwrap">
+      <div id="dStage"><div id="dScreen"></div></div>
+      <aside id="dProps"></aside>
+    </div>
+    <datalist id="dBgList"></datalist>
+  </section>
+
   <section>
-    <h2>4. Images</h2>
+    <h2>5. Images</h2>
     <p class="hint">Click an image to replace it. Use the same file type and ideally the same size (shown on hover).</p>
     <div class="row" style="margin-bottom:12px">
       <input id="filter" placeholder="Filter, e.g. bg, icon, pointer, night" style="max-width:320px">
@@ -91,7 +146,7 @@
   </section>
 
   <section>
-    <h2>5. Layout files (JSON)</h2>
+    <h2>6. Layout files (JSON, advanced)</h2>
     <p class="hint">Positions, sizes and which widgets appear. Folders match screen sizes (layout-1600x720, layout-1280x480 and so on).</p>
     <div class="row" style="margin-bottom:10px">
       <select id="jsonSel" style="max-width:520px"></select>
@@ -101,7 +156,7 @@
   </section>
 
   <section>
-    <h2>6. Build</h2>
+    <h2>7. Build</h2>
     <p class="hint">Builds and signs the APK into the <code>output</code> folder. Copy it to a USB stick and install it on the head unit, or use ADB.</p>
     <div class="row">
       <button class="primary" id="btnBuild">Build signed APK</button>
@@ -112,11 +167,13 @@
   </section>
 </main>
 
+<script src="/designer.js"></script>
 <script>
 const $ = id => document.getElementById(id);
 let images = [], replaceTarget = null;
 
 function log(msg) { $('log').textContent = msg; }
+window.studioLog = log;
 
 async function api(path, opts = {}) {
   const r = await fetch(path, opts);
@@ -147,7 +204,7 @@ async function refresh() {
   const outs = s.outputs || [];
   $('outputs').innerHTML = outs.length ? 'Built: ' + outs.slice(0, 6).map(n =>
     `<div><a href="/api/download?name=${encodeURIComponent(n)}">${n}</a>${s.adb ? ` <button data-adb="${n}">Install via ADB</button>` : ''}</div>`).join('') : '';
-  if (i) { await loadImages(); await loadJsonList(); }
+  if (i) { await loadImages(); await loadJsonList(); if (window.Designer) await Designer.init(false); }
 }
 
 async function loadImages() {
@@ -199,6 +256,7 @@ function uploadApk(file) {
     const r = await api('/api/template', { method: 'POST', body: file });
     log(r.log);
     await refresh();
+    if (window.Designer) await Designer.init(true);
   });
 }
 
@@ -226,9 +284,11 @@ $('btnSaveJson').onclick = e => busy(e.target, async () => {
   try { JSON.parse($('jsonText').value); } catch (err) { throw new Error('Invalid JSON: ' + err.message); }
   await api('/api/file?path=' + encodeURIComponent($('jsonSel').value), { method: 'POST', body: $('jsonText').value });
   log('Saved ' + $('jsonSel').value);
+  if (window.Designer) await Designer.init(true);
 });
 
 $('btnBuild').onclick = e => busy(e.target, async () => {
+  if (window.Designer && Designer.isDirty() && !confirm('The layout designer has unsaved changes. Build without them?')) return;
   log('Building... (about 30 seconds)');
   const body = {};
   for (const k of ['suffix', 'themeName', 'themeId', 'versionCode', 'versionName']) body[k] = $(k).value.trim();

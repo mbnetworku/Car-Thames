@@ -24,6 +24,8 @@ $OutDir    = Join-Path $Root 'output'
 $Template  = Join-Path $WorkDir 'template.apk'
 $KeyStore  = Join-Path $WorkDir 'theme-release.jks'
 $KeyPass   = Join-Path $WorkDir 'keystore.pass'
+$OrigDir   = Join-Path $WorkDir 'originals'
+$DesignFile = Join-Path $WorkDir 'designer.json'
 $PluginPrefix = 'launcher.variety.theme.plugin.'
 
 $ApktoolUrl = 'https://github.com/iBotPeaches/Apktool/releases/download/v2.10.0/apktool_2.10.0.jar'
@@ -104,6 +106,27 @@ function Get-RelPath([string]$full) {
     $sep = [IO.Path]::DirectorySeparatorChar
     $rootFull = [IO.Path]::GetFullPath($SrcDir).TrimEnd($sep) + $sep
     return $full.Substring($rootFull.Length) -replace '\\', '/'
+}
+
+function Test-JsonText([string]$text) {
+    # Validates JSON. Theme files use empty "" keys, which ConvertFrom-Json in PowerShell 5.1 rejects.
+    $jd = 'System.Text.Json.JsonDocument' -as [type]
+    if ($jd) { $doc = $jd::Parse($text); $doc.Dispose(); return }
+    Add-Type -AssemblyName System.Web.Extensions
+    $ser = New-Object System.Web.Script.Serialization.JavaScriptSerializer
+    $ser.MaxJsonLength = 67108864
+    $null = $ser.DeserializeObject($text)
+}
+
+function Backup-Original([string]$full) {
+    # Keep the first version of every file we overwrite, so effects (like opacity) can be re-applied or undone.
+    $rel = Get-RelPath $full
+    $dst = Join-Path $OrigDir $rel
+    if ((Test-Path $full) -and -not (Test-Path $dst)) {
+        $dir = Split-Path $dst
+        if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+        Copy-Item $full $dst
+    }
 }
 
 function Read-Text([string]$path) { [IO.File]::ReadAllText($path, [Text.Encoding]::UTF8) }
@@ -206,6 +229,8 @@ function Import-Template([byte[]]$bytes) {
     [IO.File]::WriteAllBytes($Template, $bytes)
     if (-not (Test-Path $ApktoolJar)) { Install-Tools | Out-Null }
     if (Test-Path $SrcDir) { Remove-Item $SrcDir -Recurse -Force }
+    if (Test-Path $OrigDir) { Remove-Item $OrigDir -Recurse -Force }
+    if (Test-Path $DesignFile) { Remove-Item $DesignFile -Force }
     $r = Invoke-Java @('-jar', $ApktoolJar, 'd', '-f', '-o', $SrcDir, $Template)
     if ($r.code -ne 0) { throw "apktool decode failed:`n$($r.output)" }
     if (-not (Test-Path (Join-Path $SrcDir 'assets\import_theme_info_config.json'))) {
@@ -355,13 +380,24 @@ function Invoke-Route($ctx) {
             $full = Get-SafePath $q['path']
             $ext = [IO.Path]::GetExtension($full).ToLower()
             if ($method -eq 'POST') {
-                if (-not (Test-Path $full)) { throw 'File does not exist' }
+                # Optional "replace": the file being superseded (same folder and name, other extension, e.g. jpg -> png).
+                $old = $null
+                if ($q['replace']) {
+                    $old = Get-SafePath $q['replace']
+                    if ((Split-Path $old) -ne (Split-Path $full) -or
+                        [IO.Path]::GetFileNameWithoutExtension($old) -ne [IO.Path]::GetFileNameWithoutExtension($full)) { throw 'replace must be the same image with another extension' }
+                    if (-not (Test-Path $old)) { $old = $null }
+                }
+                if (-not (Test-Path $full) -and -not $old) { throw 'File does not exist' }
                 $bytes = Read-BodyBytes $req
                 if ($ext -eq '.json') {
                     $text = [Text.Encoding]::UTF8.GetString($bytes)
-                    try { $null = ConvertFrom-Json $text } catch { throw "Invalid JSON: $($_.Exception.Message)" }
+                    try { Test-JsonText $text } catch { throw "Invalid JSON: $($_.Exception.Message)" }
+                    Backup-Original $full
                     Write-Text $full $text
-                } elseif ($MimeTypes.ContainsKey($ext)) {
+                } elseif ($MimeTypes.ContainsKey($ext) -and $ext -ne '.apk') {
+                    Backup-Original $full
+                    if ($old -and $old -ne $full) { Backup-Original $old; Remove-Item $old -Force }
                     [IO.File]::WriteAllBytes($full, $bytes)
                 } else { throw 'Only images and JSON can be replaced.' }
                 Send-Json $ctx @{ ok = $true }; return
@@ -369,6 +405,29 @@ function Invoke-Route($ctx) {
             if (-not (Test-Path $full)) { Send-Json $ctx @{ error = 'Not found' } 404; return }
             $type = $MimeTypes[$ext]; if (-not $type) { $type = 'application/octet-stream' }
             Send-Response $ctx 200 ([IO.File]::ReadAllBytes($full)) $type; return
+        }
+        '^/api/original$' {
+            # The untouched version of a file (falls back to the current one).
+            $cur = Get-SafePath $q['path']
+            $orig = Join-Path $OrigDir (Get-RelPath $cur)
+            $f = if (Test-Path $orig) { $orig } elseif (Test-Path $cur) { $cur } else { $null }
+            if (-not $f) { Send-Json $ctx @{ error = 'Not found' } 404; return }
+            $type = $MimeTypes[[IO.Path]::GetExtension($f).ToLower()]; if (-not $type) { $type = 'application/octet-stream' }
+            Send-Response $ctx 200 ([IO.File]::ReadAllBytes($f)) $type; return
+        }
+        '^/api/designer$' {
+            # Designer settings (opacity per image, preview apps). Stored only in the workspace, not in the APK.
+            if ($method -eq 'POST') {
+                $text = [Text.Encoding]::UTF8.GetString((Read-BodyBytes $req))
+                Test-JsonText $text
+                Write-Text $DesignFile $text
+                Send-Json $ctx @{ ok = $true }; return
+            }
+            $t = if (Test-Path $DesignFile) { Read-Text $DesignFile } else { '{}' }
+            Send-Response $ctx 200 ([Text.Encoding]::UTF8.GetBytes($t)) 'application/json; charset=utf-8'; return
+        }
+        '^/(designer\.js)$' {
+            Send-Response $ctx 200 ([IO.File]::ReadAllBytes((Join-Path $WebDir $Matches[1]))) 'text/javascript; charset=utf-8'; return
         }
         '^/api/build$' {
             if ($method -ne 'POST') { break }
