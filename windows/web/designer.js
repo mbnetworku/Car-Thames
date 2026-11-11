@@ -24,16 +24,24 @@
   const PLACEHOLDER = { time: '18:05', clock: '🕒', weather: '☀ 28°', speed_text: '125 km/h', speed_effect: '', medias: '♪ Music', desktop_window: 'Map / app window' };
   const COMMON_APPS = ['app_navi', 'app_music', 'app_bt', 'app_radio', 'app_video', 'app_setting', 'app_carsetting', 'app_file', 'app_eq', 'app_360', 'app_apps', 'app_browser', 'app_camera', 'app_call'];
 
+  // ------------------------------------------------------------------ backend
+  // The Windows Studio serves /api/* over HTTP. The browser-only web app sets window.StudioBackend
+  // with a fetch-compatible handler (and blob URLs for images) so the same designer runs without a server.
+  const B = window.StudioBackend || {
+    fetch: (u, o) => fetch(u, o),
+    url: p => '/api/file?path=' + encodeURIComponent(p) + '&v=' + ver
+  };
+
   // ------------------------------------------------------------------ helpers
   async function api(path, opts) {
-    const r = await fetch(path, opts);
+    const r = await B.fetch(path, opts);
     const ct = r.headers.get('content-type') || '';
     const data = ct.includes('json') ? await r.json() : await r.text();
     if (!r.ok) throw new Error(data && data.error ? data.error : r.statusText);
     return data;
   }
   async function getJson(path) {
-    const r = await fetch('/api/file?path=' + encodeURIComponent(path) + '&t=' + Date.now());
+    const r = await B.fetch('/api/file?path=' + encodeURIComponent(path) + '&t=' + Date.now());
     if (!r.ok) return null;
     const t = await r.text();
     try { return JSON.parse(t.replace(/^﻿/, '')); } catch (e) { console.warn('Bad JSON', path, e); return null; }
@@ -66,7 +74,7 @@
     const night = $('dNight').checked, portrait = L && L.H > L.W;
     return list.slice().sort((a, b) => dirRank(a, night, portrait) - dirRank(b, night, portrait))[0];
   }
-  const imgUrl = name => { const p = imgPath(name); return p ? '/api/file?path=' + encodeURIComponent(p) + '&v=' + ver : null; };
+  const imgUrl = name => { const p = imgPath(name); return p ? B.url(p) : null; };
   const opacityOf = name => (meta.opacity && meta.opacity[name] != null) ? meta.opacity[name] : 1;
 
   // gravity  "l_7|t_74", "right|r_265|t_45", "center_vertical|l_156", "center" ...
@@ -450,7 +458,7 @@
       for (const p of (idx[name] || [])) {
         if (is9(p)) continue;
         const orig = meta.orig[p] || p;
-        const blob = await (await fetch('/api/original?path=' + encodeURIComponent(orig) + '&t=' + Date.now())).blob();
+        const blob = await (await B.fetch('/api/original?path=' + encodeURIComponent(orig) + '&t=' + Date.now())).blob();
         let target, body;
         if (op >= 1) { target = orig; body = blob; }
         else {
@@ -509,7 +517,7 @@
     g.fillStyle = '#000'; g.fillRect(0, 0, L.W, L.H);
     const sr = $('dScreen').getBoundingClientRect(), s = L.scale;
     const draw = async (url, x, y, w, h, a) => {
-      try { const bmp = await createImageBitmap(await (await fetch(url)).blob()); g.globalAlpha = a; g.drawImage(bmp, x, y, w, h); g.globalAlpha = 1; } catch (e) { }
+      try { const bmp = await createImageBitmap(await (await B.fetch(url)).blob()); g.globalAlpha = a; g.drawImage(bmp, x, y, w, h); g.globalAlpha = 1; } catch (e) { }
     };
     for (const el of $('dScreen').querySelectorAll('.d-pagebg, .d-bg, .d-icon')) {
       const r = el.getBoundingClientRect();

@@ -6,12 +6,31 @@ Tools and notes for building custom **"variety theme" plugin APKs** for Android 
 
 | Path | What it is |
 |---|---|
+| `webapp/` | **Car Theme Studio Web**: the whole studio in the browser, no install |
 | `windows/Start-ThemeStudio.bat` | Double-click to start. Asks for Administrator, then launches the web UI |
 | `windows/ThemeStudio.ps1` | Local PowerShell web server on `http://localhost:8765/` that does the work |
 | `windows/web/index.html` | The web UI |
 | `windows/launcher/CarLauncher.apk` | **Car Launcher**: a home screen app that shows your themes (source in `android-launcher/`) |
 | `android-launcher/` | Launcher source code and build script, [details](android-launcher/README.md) |
 | `docs/SFP_T100_DN-analysis.md` | Reverse-engineering notes on the SFP_T100_DN theme used as the first template |
+
+## Car Theme Studio Web (any computer, nothing to install)
+
+The `webapp/` folder is the same studio running **entirely in the browser**. It works on Windows, Mac, Linux, Chromebook or a tablet, and your APK never leaves your device.
+
+- **Online:** https://mbnetworku.github.io/Car-Thames/ (after GitHub Pages is enabled, see below).
+- **Offline:** download this repo and double-click `webapp/index.html`.
+
+**What it can do:**
+1. **Open** a theme APK.
+2. **Change its identity:** ID name, display name, theme number and version.
+3. **Design** the layout, transparency and icon sizes in the same designer as the Windows Studio.
+4. **Replace** images and edit the JSON.
+5. **Export** a signed APK, built and signed in the browser.
+
+**Signing key:** the key is created on your first export and kept in your browser. Use **Back up key** and keep the file safe: later updates of a theme must be signed with the same key.
+
+**Enabling the website (one time):** in the repo, go to **Settings → Pages → Build and deployment → Source** and choose **GitHub Actions**. The `Publish web app` workflow then publishes it on every change.
 
 ## Car Theme Studio (Windows)
 

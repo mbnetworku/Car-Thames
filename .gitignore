@@ -7,3 +7,5 @@ windows/output/
 android-launcher/.tools/
 android-launcher/build/
 !windows/launcher/CarLauncher.apk
+webapp/designer.js
+webapp/CarLauncher.apk

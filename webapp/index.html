@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Car Theme Studio</title>
+<meta name="description" content="Design custom home-screen themes for Android car head units and export signed theme APKs, entirely in your browser.">
+<style>
+  :root {
+    --bg: #0f1216; --panel: #181c22; --panel2: #20262e; --line: #2c333d;
+    --text: #e6e9ee; --muted: #8b95a3; --accent: #2f9cf4; --ok: #3ccf8e; --warn: #f2b33d; --bad: #f2555a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 "Segoe UI", system-ui, sans-serif; }
+  header { display: flex; align-items: center; gap: 16px; padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--panel); position: sticky; top: 0; z-index: 5; }
+  header h1 { font-size: 17px; margin: 0; font-weight: 600; }
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+  .chip { padding: 3px 10px; border-radius: 99px; background: var(--panel2); font-size: 12px; color: var(--muted); }
+  .chip.ok::before { content: "● "; color: var(--ok); }
+  .chip.bad::before { content: "● "; color: var(--bad); }
+  main { max-width: 1200px; margin: 0 auto; padding: 20px; display: grid; gap: 18px; }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; }
+  section h2 { margin: 0 0 4px; font-size: 15px; }
+  section p.hint { margin: 0 0 14px; color: var(--muted); font-size: 13px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+  label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
+  input, select, textarea { background: var(--panel2); border: 1px solid var(--line); color: var(--text); border-radius: 6px; padding: 8px 10px; font: inherit; width: 100%; }
+  textarea { font-family: Consolas, monospace; font-size: 12px; min-height: 320px; }
+  button { background: var(--panel2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 8px 14px; font: inherit; cursor: pointer; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  button:disabled { opacity: .5; cursor: wait; }
+  .drop { border: 2px dashed var(--line); border-radius: 10px; padding: 26px; text-align: center; color: var(--muted); cursor: pointer; }
+  .drop.over { border-color: var(--accent); color: var(--text); }
+  .gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; max-height: 620px; overflow: auto; padding-right: 4px; }
+  .tile { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 6px; display: grid; gap: 4px; cursor: pointer; }
+  .tile:hover { border-color: var(--accent); }
+  .tile .img { height: 100px; display: grid; place-items: center; background: repeating-conic-gradient(#2a2f37 0 25%, #22272e 0 50%) 0 0/16px 16px; border-radius: 4px; overflow: hidden; }
+  .tile img { max-width: 100%; max-height: 100px; }
+  .tile .name { font-size: 11px; color: var(--muted); word-break: break-all; }
+  pre.log { background: #0a0c0f; border: 1px solid var(--line); border-radius: 6px; padding: 10px; font-size: 12px; max-height: 260px; overflow: auto; white-space: pre-wrap; margin: 12px 0 0; }
+  .outputs a { color: var(--accent); }
+  .muted { color: var(--muted); }
+  /* ---- designer ---- */
+  .dbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .dbar select { width: auto; }
+  .dbar .chk { display: flex; gap: 6px; align-items: center; color: var(--text); font-size: 13px; }
+  .dbar .chk input { width: auto; }
+  .dwrap { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; align-items: start; }
+  #dStage { position: relative; overflow: hidden; background: #000; border-radius: 8px; border: 1px solid var(--line); user-select: none; }
+  #dScreen { position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: hidden; background: #000; }
+  .d-pagebg { position: absolute; inset: 0; background-size: 100% 100%; pointer-events: none; }
+  .d-el { position: absolute; cursor: move; outline: 1px dashed transparent; }
+  .labels .d-el { outline-color: rgba(47,156,244,.45); }
+  .d-el:hover { outline: 2px solid rgba(47,156,244,.8); z-index: 3; }
+  .d-el.sel { outline: 3px solid #2f9cf4; z-index: 4; }
+  .d-bg { position: absolute; inset: 0; background-size: 100% 100%; pointer-events: none; }
+  .d-icon { position: absolute; pointer-events: none; object-fit: contain; }
+  .d-label { position: absolute; left: 0; right: 0; text-align: center; color: #fff; white-space: nowrap; overflow: hidden; pointer-events: none; text-shadow: 0 1px 2px #000; }
+  .d-ph { position: absolute; inset: 0; display: grid; place-items: center; color: rgba(255,255,255,.75); font-size: 28px; font-weight: 600; pointer-events: none; text-shadow: 0 2px 4px #000; }
+  .d-tag { display: none; position: absolute; left: 0; top: 0; background: rgba(47,156,244,.9); color: #fff; font-size: 13px; padding: 1px 5px; pointer-events: none; white-space: nowrap; }
+  .labels .d-tag, .d-el.sel > .d-tag { display: block; }
+  .d-handle { position: absolute; right: -9px; bottom: -9px; width: 18px; height: 18px; background: #2f9cf4; border: 2px solid #fff; border-radius: 50%; cursor: nwse-resize; z-index: 5; }
+  #dProps { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 14px; display: grid; gap: 10px; }
+  #dProps h3 { margin: 0; font-size: 14px; } #dProps h4 { margin: 6px 0 0; font-size: 13px; }
+  #dProps .pgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  #dProps .chk { display: flex; gap: 8px; align-items: center; color: var(--text); font-size: 13px; }
+  #dProps .chk input { width: auto; }
+  #dProps p { margin: 0; }
+  input[type=range] { padding: 0; }
+  .small { font-size: 12px; }
+  button.danger:hover { border-color: var(--bad); color: var(--bad); }
+  body.d-full main > section:not(#designer), body.d-full header, body.d-full #dProps, body.d-full #designer > h2, body.d-full #designer > p { display: none; }
+  body.d-full main { max-width: none; padding: 10px; }
+  body.d-full #designer { border: 0; padding: 0; background: transparent; }
+  body.d-full .dwrap { grid-template-columns: 1fr; }
+  @media (max-width: 900px) { .dwrap { grid-template-columns: 1fr; } }
+  @media (max-width: 600px) { header { flex-wrap: wrap; } .chips { margin-left: 0; } main { padding: 12px; } }
+
+  .key { display: grid; gap: 6px; }
+  .key code { font-size: 11px; word-break: break-all; color: var(--muted); }
+  .hero { color: var(--muted); font-size: 13px; margin: 0; }
+  .steps { margin: 6px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+  .warn { color: var(--warn); }
+</style>
+</head>
+<body>
+<header>
+  <h1>🚗 Car Theme Studio <span class="muted" style="font-weight:400;font-size:13px">web</span></h1>
+  <div class="chips" id="chips"></div>
+</header>
+<main>
+  <section>
+    <h2>1. Open a theme APK</h2>
+    <p class="hint">Drop a variety theme APK (for example SFP_T100_DN.apk), or one you made before. Everything happens in this browser tab: the file is never uploaded.</p>
+    <div class="drop" id="drop">Drop .apk here or click to choose<input type="file" id="apkFile" accept=".apk,application/vnd.android.package-archive" hidden></div>
+  </section>
+
+  <section id="identity" style="display:none">
+    <h2>2. Theme identity</h2>
+    <p class="hint">Use a <b>new</b> ID name so your theme installs next to the original instead of replacing it.</p>
+    <div class="grid2">
+      <label>ID name (package suffix)<input id="suffix" placeholder="my_theme_01"></label>
+      <label>Display name<input id="themeName" placeholder="My Theme"></label>
+      <label>Theme number (digits)<input id="themeId" placeholder="20261111000001"></label>
+      <label>Version code<input id="versionCode" inputmode="numeric"></label>
+      <label>Version name<input id="versionName"></label>
+      <label>OEM ID (read only)<input id="oemId" disabled></label>
+    </div>
+    <p class="muted" id="pkgLine" style="margin:10px 0 0"></p>
+  </section>
+
+  <section id="designer" style="display:none">
+    <h2>3. Layout designer and preview</h2>
+    <p class="hint">See how the home screen will look. Move and resize anything, add or remove app slots, change icon and label sizes, and make panels transparent. Click <b>Save design</b> before building.</p>
+    <div class="dbar">
+      <select id="dLayout" title="Screen size"></select>
+      <select id="dPage" title="Left card page"></select>
+      <label class="chk"><input type="checkbox" id="dNight"> Night mode</label>
+      <label class="chk"><input type="checkbox" id="dLabels" checked> Show outlines</label>
+      <button id="dAddApp">+ Add app slot</button>
+      <button id="dFull">Full screen preview</button>
+      <button id="dExport">Save preview as PNG</button>
+      <button id="dSave">Save design</button>
+      <span class="muted small" id="dZoom"></span>
+    </div>
+    <div class="dwrap">
+      <div id="dStage"><div id="dScreen"></div></div>
+      <aside id="dProps"></aside>
+    </div>
+    <datalist id="dBgList"></datalist>
+  </section>
+
+  <section id="imagesSec" style="display:none">
+    <h2>4. Images</h2>
+    <p class="hint">Click an image to replace it. Use the same size for the best result (shown on hover).</p>
+    <div class="row" style="margin-bottom:12px">
+      <input id="filter" placeholder="Filter, e.g. bg, icon, pointer, night" style="max-width:320px">
+      <span class="muted" id="imgCount"></span>
+    </div>
+    <div class="gallery" id="gallery"></div>
+    <input type="file" id="imgFile" accept="image/*" hidden>
+  </section>
+
+  <section id="jsonSec" style="display:none">
+    <h2>5. Layout files (JSON, advanced)</h2>
+    <div class="row" style="margin-bottom:10px">
+      <select id="jsonSel" style="max-width:520px"></select>
+      <button id="btnSaveJson">Save JSON</button>
+    </div>
+    <textarea id="jsonText" spellcheck="false"></textarea>
+  </section>
+
+  <section id="buildSec" style="display:none">
+    <h2>6. Export</h2>
+    <p class="hint">Builds and signs the theme APK in your browser, then downloads it. Install it on the head unit together with Car Launcher.</p>
+    <div class="row">
+      <button class="primary" id="btnBuild">Export signed APK</button>
+    </div>
+    <div class="key" style="margin-top:14px">
+      <div><b>Signing key</b> <span class="muted small" id="keyInfo">none yet - one is created on first export</span></div>
+      <div class="row">
+        <button id="btnKeyExport">Back up key</button>
+        <button id="btnKeyImport">Restore key</button>
+        <button id="btnKeyNew" class="danger">New key</button>
+        <input type="file" id="keyFile" accept=".json" hidden>
+      </div>
+      <p class="muted small">Updates of a theme must be signed with the same key. The key is kept in this browser only; back it up.</p>
+    </div>
+    <pre class="log" id="log">Ready.</pre>
+  </section>
+
+  <section>
+    <h2>Car Launcher</h2>
+    <p class="hint">The home screen app that shows your themes on the car. Install it once, then install any theme you export.</p>
+    <a id="dlLauncher" href="CarLauncher.apk" download><button type="button">Download CarLauncher.apk</button></a>
+    <ol class="steps">
+      <li>Install <b>CarLauncher.apk</b> and your exported theme APK on the head unit (USB stick or ADB).</li>
+      <li>Press <b>Home</b>, choose <b>Car Launcher</b>, then <b>Always</b>.</li>
+      <li>Long-press an empty area, then <b>Theme</b>, and pick your theme.</li>
+    </ol>
+  </section>
+</main>
+
+<script src="vendor/fflate-0.8.2.min.js"></script>
+<script src="vendor/forge-1.3.1.min.js"></script>
+<script src="apk.js"></script>
+<script src="backend.js"></script>
+<!-- On GitHub Pages designer.js is copied next to this page; from a downloaded repo it is loaded from windows/web. -->
+<script src="designer.js" onerror="var s=document.createElement('script');s.src='../windows/web/designer.js';document.head.appendChild(s)"></script>
+<script src="app.js"></script>
+</body>
+</html>
